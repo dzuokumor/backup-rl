@@ -1,0 +1,11 @@
+{
+  "agent": "do_nothing",
+  "episodes": 30,
+  "survival_rate": 0.0,
+  "mean_reward": 9.771143793523285,
+  "std_reward": 67.36906514245696,
+  "median_reward": -16.918783922195434,
+  "mean_steps": 23.866666666666667,
+  "mean_served_pct": 100.0,
+  "mean_cascades": 8.1
+}

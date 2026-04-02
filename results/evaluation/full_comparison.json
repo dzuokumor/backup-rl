@@ -1,0 +1,65 @@
+[
+  {
+    "agent": "random",
+    "survival": "0%",
+    "mean_reward": -15.583989592657256,
+    "std_reward": 15.913521971496731,
+    "mean_steps": 8.22,
+    "served": 98.48311310691557,
+    "cascades": 6.08
+  },
+  {
+    "agent": "do_nothing",
+    "survival": "0%",
+    "mean_reward": -0.6778444753110413,
+    "std_reward": 45.846917698140636,
+    "mean_steps": 17.7,
+    "served": 100.0,
+    "cascades": 7.58
+  },
+  {
+    "agent": "dqn_1m",
+    "survival": "0%",
+    "mean_reward": 178.08630087975612,
+    "std_reward": 160.60478853587213,
+    "mean_steps": 112.96,
+    "served": 99.01862045391265,
+    "cascades": 0.92
+  },
+  {
+    "agent": "ppo_1m",
+    "survival": "0%",
+    "mean_reward": 309.06102035651634,
+    "std_reward": 245.98608921736064,
+    "mean_steps": 254.98,
+    "served": 98.90387343490902,
+    "cascades": 0.26
+  },
+  {
+    "agent": "a2c_100k",
+    "survival": "0%",
+    "mean_reward": 75.18828709451553,
+    "std_reward": 39.42671448758184,
+    "mean_steps": 62.92,
+    "served": 100.0,
+    "cascades": 0.62
+  },
+  {
+    "agent": "a2c_1m",
+    "survival": "0%",
+    "mean_reward": 8.428285307850414,
+    "std_reward": 53.53243412097964,
+    "mean_steps": 30.76,
+    "served": 88.48823887940586,
+    "cascades": 6.62
+  },
+  {
+    "agent": "reinforce_1m",
+    "survival": "0%",
+    "mean_reward": 50.897458822244324,
+    "std_reward": 56.99063025651394,
+    "mean_steps": 42.98,
+    "served": 95.68284670487974,
+    "cascades": 2.1
+  }
+]

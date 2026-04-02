@@ -1,0 +1,11 @@
+{
+  "agent": "random",
+  "episodes": 30,
+  "survival_rate": 0.0,
+  "mean_reward": -12.965073480430517,
+  "std_reward": 21.19592943070319,
+  "median_reward": -18.771528275609015,
+  "mean_steps": 9.1,
+  "mean_served_pct": 98.11722261121652,
+  "mean_cascades": 5.9
+}
