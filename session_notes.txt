@@ -1,0 +1,192 @@
+SESSION NOTES — 2026-04-02
+==========================
+
+WHAT WE DID THIS SESSION
+-------------------------
+
+1. Set up venv on macOS with PyTorch CPU + all dependencies
+2. Built web-based GUI (gui.py) for visualizing the trained PPO agent in the environment
+   - FastAPI backend serving MJPEG frames from the actual 3D OpenGL renderer
+   - HTML/JS frontend with play/pause/step/reset/speed controls + live stats panel
+   - Frames captured via render_to_array() -> PIL JPEG encoding -> streamed to browser
+   - Main thread runs pygame/OpenGL (macOS requirement), uvicorn runs in background thread
+3. Modified environment for demo mode (gui.py only, not training):
+   - fault_probability=0.001 (5x fewer faults than training default of 0.005)
+   - fault_recovery_steps=20 (lines auto-reconnect after 20 steps, training had 0)
+   - max_disconnected_lines=10 (vs 8 default)
+   - survival_bonus=0.2
+4. Added generator restart logic: when a tripped generator's bus reconnects to grid,
+   generator restarts at minimum output (only in recovery mode, only for generators
+   that start online — AES Barge stays offline)
+5. Fixed rendering to use actual env state instead of graph connectivity:
+   - Building brightness based on load_served_pct * (1 - load_shed_fraction) instead of BFS from bus 0
+   - Substation colors based on load shedding state instead of voltage deviations
+   - Generator brightness scales with output fraction (0.5 idle to 1.0 full output)
+   - Offline generators render at 0.25 brightness (visible but dim)
+6. Camera adjustments: CAM_HEIGHT 18->11, CAM_ANGLE 45->50, CAM_CENTER_Z 5->6, FOV 42->32 (zoom in)
+7. Added _get_powered_buses() to rendering.py — finds all buses in any connected component
+   that has an active generator (instead of only BFS from bus 0)
+8. Wrote full report draft (report_draft.txt)
+
+
+CHANGES TO FILES
+-----------------
+
+environment/custom_env.py:
+  - Added generator restart in _check_generator_islanding(): when gen_available=0 and bus
+    reconnects to grid and fault_recovery_steps>0 and GENERATOR_INIT_AVAILABLE=1,
+    restart generator at minimum output
+
+environment/rendering.py:
+  - Added _get_powered_buses() function (finds powered components, not just bus-0 reachable)
+  - Changed _draw_buildings: brightness = (1 - shed) * serve_pct instead of connectivity check
+  - Changed _draw_substations: color based on shedding state not voltage deviations
+  - Changed generator brightness: scales with output fraction
+  - Camera: CAM_HEIGHT=11, CAM_ANGLE=50, CAM_CENTER_Z=6, FOV=32
+  - Replaced get_connected_buses with _get_powered_buses in all 5 draw methods
+
+gui.py (NEW):
+  - Full web GUI: FastAPI + pygame/OpenGL renderer + MJPEG streaming
+  - Simulation class managing env state, model predictions, frame capture
+  - run_main_loop() in main thread for pygame + stepping
+  - uvicorn in background thread
+  - HTML page with live video stream, controls, stats panel
+  - API endpoints: /play, /pause, /step, /reset, /speed, /frame, /stream, /state
+
+
+OBSERVED METRICS & EPISODES
+-----------------------------
+
+Episode traces from gui demo runs:
+
+RUN 1 (default env, before changes):
+  - Model: PPO 1M best (reward=211.60)
+  - Step 2: CASCADE — fault on Akangba-Lekki 33kV, 3 generators tripped
+  - Ran 403 steps, reward 440.97, blackout at step 403
+  - Auto-disconnect Lekki-Ibeju 33kV (thermal) triggered termination
+  - Frame sizes: 57KB initial -> stable throughout (old renderer)
+
+RUN 2 (optimized env, before rendering fixes):
+  - Steps 1-13: clean
+  - Step 14-15: Egbin-Ibeju and Mushin-Festac faulted
+  - Step 34-35: both auto-recovered (20 steps exactly)
+  - Steps 35-192: 158 steps zero cascades
+  - Step 193: Lekki-Ibeju faulted, auto-recovered step 213
+  - Steps 226-227: Festac-Ojo and Omotosho-Festac faulted
+  - Step 318: 3 generators tripped (Akangba, Ajah, Omotosho islanded)
+  - Agent survived on Egbin alone (3.32 pu capacity vs ~2.67 pu demand)
+  - Ran past step 437+ still alive
+  - Final: survived 1000 steps, reward ~1558
+
+RUN 3 (optimized env, with rendering fixes):
+  - Step 2: fault on Islands-Apapa (auto-recovered step 22)
+  - Step 52: fault on Egbin-Akangba 330kV
+  - All 4 main generators stayed ON entire run (gens=[1,1,1,1,0])
+  - Agent shed load at Akangba around step 216 (load_served dropped to 91.9%)
+  - Steady state: demand ~2.2-2.7 pu, generation ~1.45-2.1 pu
+  - Multiple faults all auto-recovered cleanly
+
+RUN 4 (final run, all fixes applied):
+  - Step 3: Lekki-Ibeju faulted, auto-recovered step 23
+  - Step 21: Orile-Agbara faulted, auto-recovered step 61
+  - Steps 61-219: 158 steps clean
+  - Step 220: Egbin-Ibeju faulted, auto-recovered step 240
+  - Frame sizes stable 85-90KB throughout (city lit)
+  - Running past step 298, all generators online
+
+
+KEY OBSERVATIONS
+-----------------
+
+1. PPO agent's strategy: often deliberately disconnects Egbin's two lines early,
+   isolating it from the rest of the grid. This trips 3 smaller generators but
+   Egbin (3.32 pu) can carry all load alone. The agent learned this is safer than
+   managing cascading failures across the full grid.
+
+2. With optimized env (auto-recovery), faults are temporary — lines reconnect after
+   20 steps. This prevents the accumulation of disconnected lines that causes
+   terminal conditions.
+
+3. Generator restart logic is critical for demo — without it, once 3 generators
+   trip at step ~2-3, the city goes permanently dark even though Egbin serves 100%.
+
+4. Demand vs generation imbalance: base demand ~2.67 pu but initial generation only
+   ~2.1 pu. Egbin alone can serve it (max 3.32 pu). The smaller generators
+   contribute ~0.6 pu combined.
+
+5. The -10.0 cascade penalty dominates the reward function. The agent's primary
+   learned behavior is cascade avoidance above all else.
+
+6. Random agent survives ~9 steps average. Do-nothing survives ~24 steps. PPO
+   routinely survives 1000 steps — orders of magnitude improvement.
+
+
+WHAT'S MISSING / NEEDS ATTENTION
+----------------------------------
+
+FROM THE RUBRIC (assignment.txt):
+1. STATIC FILE showing random agent — main.py --random --no-render runs this and
+   saves CSV logs. EXISTS but may need to regenerate on this machine.
+
+2. AGENT DIAGRAM — flowchart showing RL loop specific to this project. Student
+   needs to create this (draw.io, PowerPoint, etc.)
+
+3. VIDEO RECORDING — screen share with camera on, explaining problem, agent behavior,
+   reward structure, running the simulation. Student needs to record this.
+
+4. README.md — rubric requires it. Check if it exists on Windows machine.
+
+5. EVALUATION OF TRAINED MODELS — full eval (50 episodes) for PPO/DQN/A2C/REINFORCE
+   best models was done on Windows machine. Results should be in
+   results/evaluation/ there. Need those for the report generalization section.
+
+6. GENERALIZATION TEST PLOT — generate_plots.py has plot_generalization_test() which
+   loads models and runs 50 episodes on unseen seeds. May have been generated on
+   Windows. Check results/plots/generalization_test.png.
+
+7. REPO NAME — rubric says "student_name_rl_summative". Current repo is "backup-rl".
+   May need to rename or create the properly named repo.
+
+8. PDF REPORT — final report needs to be saved as PDF. The report_draft.txt has all
+   content, student needs to format in Word/Docs and export.
+
+FROM THE WINDOWS MACHINE (may need to copy over):
+- Full evaluation results (results/evaluation/*_eval_summary.json for each algorithm)
+- Generalization test plot
+- Any additional training logs
+- The 100k sweep models were all trained there
+- 1M models were all trained there (they're in this repo too)
+
+REPORT NEEDS:
+- 5 plot images inserted (reward_curves.png, dqn_loss.png, entropy_curves.png,
+  convergence_comparison.png, best_run_comparison.png)
+- Generalization test plot or data
+- Agent diagram
+- Humanizer skill applied to text before submission
+
+
+ENVIRONMENT QUICK REFERENCE
+-----------------------------
+
+Grid: IEEE 14-bus, Lagos/EKEDC naming
+Buses: 14 (Egbin, Akangba, Ajah-TS, Lekki, Ibeju, Omotosho, Islands, Apapa, Aes-Barge, Mushin, Festac, Ojo, Orile, Agbara)
+Lines: 20 transmission lines with thermal limits
+Generators: 5 (Egbin 3.32pu, Akangba 0.40, Ajah 0.40, Omotosho 0.40, AES Barge 0.25 backup)
+Load buses: 11 (total base demand ~2.67 pu)
+Observation: 117 dimensions
+Actions: 53 discrete
+Episode: 1000 steps max
+Blackout threshold: <30% load served OR 8+ lines disconnected (10 in demo)
+Fault probability: 0.005 default, 0.001 demo
+Cascade: up to 5 rounds per step, 3-step overload timer before auto-disconnect
+
+Training results (1M steps, final 100-episode mean):
+  PPO:       211.60
+  DQN:       158.62
+  REINFORCE:  62.10
+  A2C:        32.16 (100k best was 88.34)
+
+Evaluation (50 episodes, from Windows):
+  PPO:    309.06 mean reward, 255 mean steps, 0.26 cascades
+  DQN:    178.09 mean reward, 113 mean steps
+  Random: -15.58 mean reward, 8 mean steps
