@@ -22,16 +22,49 @@ from environment.grid_topology import (
     get_connected_buses,
 )
 
+
+def _get_powered_buses(line_status, gen_available):
+    """For rendering: find all buses in any component that has an active generator."""
+    adjacency = {i: set() for i in range(NUM_BUSES)}
+    for k in range(NUM_LINES):
+        if line_status[k] == 1:
+            i, j = LINE_CONNECTIONS[k]
+            adjacency[i].add(j)
+            adjacency[j].add(i)
+
+    visited_all = set()
+    powered = set()
+    for start in range(NUM_BUSES):
+        if start in visited_all:
+            continue
+        component = set()
+        stack = [start]
+        while stack:
+            node = stack.pop()
+            if node in component:
+                continue
+            component.add(node)
+            for neighbor in adjacency[node]:
+                if neighbor not in component:
+                    stack.append(neighbor)
+        visited_all |= component
+        has_gen = any(
+            gen_available[idx] for idx, bus in enumerate(GENERATOR_BUSES) if bus in component
+        )
+        if has_gen:
+            powered |= component
+    return powered
+
 WINDOW_WIDTH = 1400
 WINDOW_HEIGHT = 900
 PANEL_WIDTH = 320
 VIEWPORT_WIDTH = WINDOW_WIDTH - PANEL_WIDTH
 
 WORLD_SCALE = 14.0
-CAM_HEIGHT = 18.0
-CAM_ANGLE = 45.0
+CAM_HEIGHT = 11.0
+CAM_ANGLE = 50.0
 CAM_CENTER_X = 7.0
-CAM_CENTER_Z = 5.0
+CAM_CENTER_Z = 6.0
 CAM_LOOK_FROM_FRONT = True
 
 WATER_Y = -0.02
@@ -326,7 +359,7 @@ class GridRenderer:
         glViewport(0, 0, VIEWPORT_WIDTH, WINDOW_HEIGHT)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(42.0, VIEWPORT_WIDTH / WINDOW_HEIGHT, 0.05, 80.0)
+        gluPerspective(32.0, VIEWPORT_WIDTH / WINDOW_HEIGHT, 0.05, 80.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
@@ -432,7 +465,7 @@ class GridRenderer:
         glEnable(GL_FOG)
 
     def _draw_ground(self, env):
-        connected = get_connected_buses(env.line_status)
+        connected = _get_powered_buses(env.line_status, env.gen_available)
 
         glColor4f(0.012, 0.012, 0.016, 1.0)
         glBegin(GL_QUADS)
@@ -472,7 +505,7 @@ class GridRenderer:
         glDepthMask(GL_TRUE)
 
     def _draw_lagoon(self, t, env):
-        connected = get_connected_buses(env.line_status)
+        connected = _get_powered_buses(env.line_status, env.gen_available)
 
         shore = self._lagoon_shoreline
         far_z = WORLD_SCALE + 3
@@ -584,7 +617,7 @@ class GridRenderer:
         glDepthMask(GL_TRUE)
 
     def _draw_roads(self, env):
-        connected = get_connected_buses(env.line_status)
+        connected = _get_powered_buses(env.line_status, env.gen_available)
 
         for b in range(NUM_BUSES):
             if b in LOAD_BUSES_ALL and b not in connected:
@@ -626,19 +659,23 @@ class GridRenderer:
                         glEnd()
 
     def _draw_buildings(self, env):
-        connected = get_connected_buses(env.line_status)
+        info = env._get_info()
+        serve_pct = info.get("load_served_pct", 100.0) / 100.0
 
         for b in range(NUM_BUSES):
             if b in LOAD_BUSES_ALL:
-                if b not in connected:
-                    dim = 0.02
-                else:
-                    dim = 1.0 - env.load_shed_fraction[b]
+                shed = env.load_shed_fraction[b]
+                dim = (1.0 - shed) * serve_pct
+                dim = max(dim, 0.02)
             elif b in GENERATOR_BUSES:
                 gen_idx = GENERATOR_BUSES.index(b)
-                dim = 0.5 if env.gen_available[gen_idx] else 0.02
+                if env.gen_available[gen_idx]:
+                    output_frac = env.gen_output[gen_idx] / max(0.01, GENERATOR_MAX_OUTPUT[gen_idx])
+                    dim = (0.5 + 0.5 * output_frac) * serve_pct
+                else:
+                    dim = 0.25
             else:
-                dim = 0.4
+                dim = 0.4 * serve_pct
 
             for bldg in self._districts[b].buildings:
                 _draw_building(bldg, dim)
@@ -716,25 +753,32 @@ class GridRenderer:
                     glEnd()
 
     def _draw_substations(self, env, t):
-        connected = get_connected_buses(env.line_status)
+        info = env._get_info()
+        serve_pct = info.get("load_served_pct", 100.0) / 100.0
 
         for b in range(NUM_BUSES):
             wx, _, wz = _bus_world_pos(b)
             is_gen = b in GENERATOR_BUSES
 
-            if b not in connected:
+            if serve_pct < 0.1:
                 color = (0.2, 0.2, 0.2)
                 glow = 0.1
-            elif env.load_shed_fraction[b] > 0:
+            elif env.load_shed_fraction[b] > 0.5:
                 shed = env.load_shed_fraction[b]
-                color = (0.9, 0.35 * (1 - shed), 0.04)
-                glow = 0.6 + 0.4 * math.sin(t * 4)
-            elif abs(env.voltages[b] - 1.0) > 0.08:
                 color = (0.9, 0.06, 0.06)
                 glow = 0.5 + 0.5 * math.sin(t * 6)
-            elif abs(env.voltages[b] - 1.0) > 0.04:
+            elif env.load_shed_fraction[b] > 0:
+                shed = env.load_shed_fraction[b]
                 color = (0.85, 0.7, 0.08)
-                glow = 0.7 + 0.3 * math.sin(t * 2)
+                glow = 0.6 + 0.4 * math.sin(t * 4)
+            elif is_gen and b in GENERATOR_BUSES:
+                gen_idx = GENERATOR_BUSES.index(b)
+                if env.gen_available[gen_idx]:
+                    color = (0.08, 0.7, 0.3)
+                    glow = 0.8 + 0.2 * math.sin(t * 1.5 + b)
+                else:
+                    color = (0.4, 0.4, 0.4)
+                    glow = 0.3
             else:
                 color = (0.08, 0.7, 0.3)
                 glow = 0.8 + 0.2 * math.sin(t * 1.5 + b)

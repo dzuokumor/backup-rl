@@ -305,6 +305,12 @@ class PowerGridEnv(gym.Env):
                 self.gen_available[i] = 0
                 self.gen_output[i] = 0.0
                 self._cascade_events.append(f"generator {GENERATOR_NAMES[i]} tripped (islanded)")
+            elif (not self.gen_available[i] and bus in connected
+                  and self._fault_recovery_steps > 0
+                  and GENERATOR_INIT_AVAILABLE[i] == 1):
+                self.gen_available[i] = 1
+                self.gen_output[i] = GENERATOR_MIN_OUTPUT[i]
+                self._cascade_events.append(f"generator {GENERATOR_NAMES[i]} restarted")
 
     def _compute_reward(self, action, action_penalty):
         demand_multiplier = self._get_demand_multiplier()
