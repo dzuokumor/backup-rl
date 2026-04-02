@@ -1,0 +1,90 @@
+Project Overview
+[One paragraph with 5 lines describing your project, the problem you're addressing, and your approach. Keep this concise but informative, explaining the core purpose of your reinforcement learning implementation.]
+Environment Description
+ Agent(s)
+[Describe the agent(s )' behaviour - what they represent and their capabilities]
+Action Space
+[Detail the actions available to your agent. Specify whether they are discrete or continuous. Provide a comprehensive list of all possible actions.]
+Observation Space
+[Describe the information that is available to the agent as an observation rather than the entire state, and how it's encoded.]
+ Reward Structure
+[Explain your reward function. What behaviors are rewarded/penalized? Include the mathematical formulation if applicable.]
+System Analysis And Design
+Deep Q-Network (DQN)
+[Describe your DQN implementation, including network architecture, special features (e.g., target networks, experience replay), and any modifications to the standard algorithm.]
+Policy Gradient Method ([REINFORCE/PPO])
+[Describe your policy gradient implementation, including network architecture, policy representation, and any special features or modifications.]
+Implementation
+DQN
+
+Learning Rate
+Gamma
+Replay Buffer Size
+Batch Size
+Exploration Strategy
+Mean Reward
+Add 10 rows
+
+
+
+
+
+
+
+
+
+
+
+REINFORCE
+
+Learning Rate
+Add Appropriate Columns
+Add Appropriate Columns
+Add Appropriate Columns
+Add Appropriate Columns
+Add 10 rows
+
+
+
+
+
+
+
+
+
+
+
+PPO
+
+Learning Rate
+Add Appropriate Columns
+Add Appropriate Columns
+Add Appropriate Columns
+Add Appropriate Columns
+Add 10 rows
+
+
+
+
+
+
+
+
+
+
+Results Discussion
+Describe and interpret every visualization
+
+Cumulative Rewards
+Insert a plot with subplots of all methods showing cumulative rewards over episodes for all methods best models. Training Stability
+[Include plots showing objective function curves for DQN and policy entropy for PG. Analyze the stability of each method.]
+Episodes To Converge
+Discuss how many episodes each method required to reach stable performance. Include quantitative measures where possible.
+Insert plots - subplots 
+
+Generalization
+Report the results of testing both trained models on unseen initial states. Analyze how well each method generalizes.
+Conclusion and Discussion
+[Summarize your findings. Which method performed better in your environment and why? What are the strengths and weaknesses of each approach for your specific problem? What improvements could be made with additional time or resources?]
+
+

@@ -1,0 +1,68 @@
+Overview
+This assignment aims to ensure students use their missions to train a reinforcement learning agent by comparing RL Methods, that is, Value-Based (Deep Q Networks) and Policy Methods (REINFORCE, PPO, A2C), to optimize for a simulated mission-based environment
+
+Tasks
+Develop a non-generic environment based on your potential capstone project/mission. 
+
+ 
+
+Implement a custom environment. To assist you in implementing this
+Define Actions space - Ensure the List of Actions is exhaustive and Relevant to your use case
+Observation Space  
+Rewards are associated with states and/or actions. 
+Start State
+Terminal Conditions 
+Visualize the Environment using an advanced simulation library - the list is Unity, pygame, OpenGL.., 
+Create a static file that shows the agent taking random actions (not using a model)  in the custom environment. This means you are just demonstrating the visualization of the components without any training involved 
+Add a Diagram agent in a simulated environment with proper descriptions. 
+ 
+
+Implement and train four separate RL models using the stable baseline library from Python.
+Ensure all models interact with the same environment for an objective comparison. Algorithms to implement are:
+Value Based
+DQN (Value-Based)
+Policy Gradient Method 
+REINFORCE ALGORITHM
+PROXIMOL POLICY OPTIMIZATION
+ACTOR CRITIC 
+Tweak Hyperparameters and discuss behaviour observed
+see the template highlighting parameters per algorithm to be reviewed. The hyperparameter tuning should be extensive - You should at least have 10 runs with different hyperparameter combinations for each algorithm.
+Record a Video that simulates the Agent in action:
+Share your entire screen with Camera on
+In the video, state the problem Briefly
+State Agent behaviour
+Briefly explain the reward Structure 
+State the objective of the Agent 
+Run the simulation with your best-performing agent. Ensure you show the GUI and Terminal verbose outputs 
+Explain agent performance in the simulation
+Report
+Dinal Report should be 7-10 Pages
+Follow the report Template Links to an external site. 
+Avoid Lengthy Explanations, Remember our aim is not to have too many pages. Let the report be focused)
+Saved as a PDF
+
+It is imperative you have a requirements.txt as your project will be cloned and executed.
+Create a GitHub repository named “student_name_rl_summative”.
+project_root/
+├── environment/
+│   ├── custom_env.py            # Custom Gymnasium environment implementation
+│   ├── rendering.py             # Visualization GUI components 
+├── training/
+│   ├── dqn_training.py          # Training script for DQN using SB3
+│   ├── pg_training.py           # Training script for PPO/other PG using SB3
+├── models/
+│   ├── dqn/                     # Saved DQN models
+│   └── pg/                      # Saved policy gradient models
+├── main.py                      # Entry point for running best performing model 
+├── requirements.txt             # Project dependencies MANDATORY
+└── README.md                    # Project documentation
+
+ 
+
+Submission Instructions:
+
+Submit a PDF file to Canvas 
+
+NOTE:
+
+Design a reinforcement learning solution that can be realistically integrated into a production-level pipeline. Your environment should reflect meaningful complexity and avoid unnecessarily using simplified abstractions such as grid worlds unless clearly justified. You are encouraged to use advanced tools or libraries where appropriate to model realistic dynamics
